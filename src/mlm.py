@@ -2,8 +2,7 @@ import re
 import numpy as np
 
 def is_maskable(tokenizer, token_id, id_to_maskable):
-    """Return's True if token_id is maskable.
-    """
+    """Return's True if token_id is maskable."""    
     if token_id in id_to_maskable:
         return id_to_maskable[token_id]
     
@@ -16,37 +15,37 @@ def is_maskable(tokenizer, token_id, id_to_maskable):
     
     return id_to_maskable[token_id]
 
-def get_maskable_positions(tokenizer, examples, id_to_maskable):
-    """Get's the maskable positions in the given examples."""
-    input_ids = examples["input_ids"]
+def get_maskable_ids(tokenizer, examples, id_to_maskable):
+    """Return's the maskable indices in the examples input_ids."""
+    maskable_ids = []
     
-    maskable_positions = []
-    for seq in input_ids:
-        maskable_positions.append([
-            pos for pos, token_id in enumerate(seq) if is_maskable(tokenizer, token_id.item(), id_to_maskable)
-        ])
+    for sequence in examples["input_ids"]:
+        maskable_seq = []
+        
+        for index, token_id in enumerate(sequence):
+            if is_maskable(tokenizer, token_id.item(), id_to_maskable):
+                maskable_seq.append(index)
+        
+        maskable_ids.append(maskable_seq)
     
-    examples["maskable_positions"] = maskable_positions
-    
-    return examples
+    return maskable_ids
 
-class MLMDataCollator:
-    def __init__(self, tokenizer, mlm_prob = 0.15):
-        self.tokenizer = tokenizer
-        self.mlm_prob = mlm_prob
+def apply_masking(tokenizer, examples, mlm_prob):
+    """Randomly replace a portion of the input sequence tokens with the <mask> token."""
+    input_ids = examples["input_ids"]
+    labels = input_ids.clone()
     
-    def collate(self, batch):
-        """Randomly replace a portion of the input sequence tokens with the <mask> token."""
-        input_ids = batch["input_ids"]
-        maskable_positions = batch["maskable_positions"]
-        
-        labels = input_ids.clone()
-        
-        for i, maskable in enumerate(maskable_positions):
-            selected_positions = np.random.choice(
-                maskable, size = max(1, int(len(maskable) * self.mlm_prob))
-            )
-            
-            input_ids[i][selected_positions] = self.tokenizer.mask_token_id
-        
-        return {"input_ids": input_ids, "labels": labels, "attention_mask": batch["attention_mask"]}
+    maskbale_ids = examples["maskable_ids"]
+    
+    for i, maskable in enumerate(maskbale_ids):
+        selected_positions = np.random.choice(
+                maskable, size = max(1, int(len(maskable) * mlm_prob))
+        )
+
+        input_ids[i, selected_positions] = tokenizer.mask_token_id
+    
+    return {
+        "input_ids": input_ids,
+        "attention_mask": examples["attention_mask"],
+        "labels": labels
+    }
