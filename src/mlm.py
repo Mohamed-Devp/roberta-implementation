@@ -23,7 +23,7 @@ def get_maskable_ids(tokenizer, examples, id_to_maskable):
         maskable_seq = []
         
         for index, token_id in enumerate(sequence):
-            if is_maskable(tokenizer, token_id.item(), id_to_maskable):
+            if is_maskable(tokenizer, token_id, id_to_maskable):
                 maskable_seq.append(index)
         
         maskable_ids.append(maskable_seq)
