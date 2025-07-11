@@ -109,12 +109,12 @@ class MultiHeadAttention(TransformerComponent):
         
         # Masking
         key_mask = attention_mask.unsqueeze(1).unsqueeze(2).expand(-1, self.num_heads, length, -1)
-        masked_scores = scores.masked_fill(key_mask, float("-inf"))
+        masked_scores = scores.masked_fill((key_mask == 0), float("-inf"))
         
         # Compute attention values
         weights = F.softmax(masked_scores, dim = -1)
 
-        query_mask = ~attention_mask.unsqueeze(1).unsqueeze(-1)
+        query_mask = attention_mask.unsqueeze(1).unsqueeze(-1)
         masked_weights = weights * query_mask
     
         attention_per_head = (masked_weights @ value).permute(0, 2, 1, 3)
